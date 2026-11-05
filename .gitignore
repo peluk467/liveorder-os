@@ -1,0 +1,33 @@
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
+
+# Entorno y Secretos
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Compilación y Builds
+dist/
+build/
+.output/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Sistema Operativo y Editores
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Documentos pesados / Binarios locales del trabajo académico (opcional según repo)
+# *.pdf
+# *.docx
