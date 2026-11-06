@@ -3,6 +3,9 @@ const cors = require('cors');
 require('dotenv').config();
 
 const { errorHandler } = require('./middlewares/errorHandler');
+const liveRoutes = require('./routes/liveRoutes');
+const productoRoutes = require('./routes/productoRoutes');
+const pedidoRoutes = require('./routes/pedidoRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -35,6 +38,11 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Rutas API
+app.use('/api/live', liveRoutes);
+app.use('/api/productos', productoRoutes);
+app.use('/api/pedidos', pedidoRoutes);
 
 // Middleware global de manejo de errores
 app.use(errorHandler);
