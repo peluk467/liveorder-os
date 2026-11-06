@@ -1,0 +1,155 @@
+{
+  "name": "LiveOrder OS - Cierre de Live, MercadoPago y WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "liveorder-cierre",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Cierre Live",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $input.first().json.body || $input.first().json;\nconst compradores = payload.compradores || [];\n\nreturn compradores.map(c => ({\n  json: {\n    sesion_id: payload.sesion_id,\n    nombre_comercio: payload.nombre_comercio || 'Tu Tienda Live',\n    username: c.username,\n    telefono: c.telefono || '5491122334455',\n    items: c.items.join(', '),\n    total: c.total\n  }\n}));"
+      },
+      "id": "separar-compradores",
+      "name": "Separar Compradores",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.mercadopago.com/checkout/preferences",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ={{ $env.MP_ACCESS_TOKEN || 'TEST-TU-MERCADOPAGO-ACCESS-TOKEN' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"items\": [\n    {\n      \"title\": \"LiveOrder: \" + $json.items,\n      \"quantity\": 1,\n      \"currency_id\": \"ARS\",\n      \"unit_price\": $json.total\n    }\n  ],\n  \"back_urls\": {\n    \"success\": \"http://localhost:5173/post-live?pago=exitoso\",\n    \"failure\": \"http://localhost:5173/post-live?pago=fallo\"\n  },\n  \"auto_return\": \"approved\"\n}",
+        "options": {}
+      },
+      "id": "mercadopago-preference",
+      "name": "Crear Link MercadoPago",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVOLUTION_API_URL || 'http://localhost:8080' }}/message/sendText/liveorder",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.EVOLUTION_API_KEY || 'mi-api-key-secreta' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": $('Separar Compradores').item.json.telefono,\n  \"text\": \"🎉 ¡Hola @\" + $('Separar Compradores').item.json.username + \"! Tus pedidos en el vivo de TikTok fueron adjudicados con éxito:\\n\\n👕 *Prendas:* \" + $('Separar Compradores').item.json.items + \"\\n💵 *Total a pagar:* $\" + $('Separar Compradores').item.json.total + \" ARS\\n\\n💳 *Link de pago seguro (MercadoPago):*\\n\" + ($json.sandbox_init_point || $json.init_point || 'https://mpago.la/demo') + \"\\n\\n¡Muchas gracias por tu compra!\"\n}",
+        "options": {}
+      },
+      "id": "evolution-api-whatsapp",
+      "name": "Enviar WhatsApp (Evolution API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Cobros y mensajes de WhatsApp enviados exitosamente vía n8n\",\n  \"total_notificados\": $input.all().length\n}",
+        "options": {}
+      },
+      "id": "responder-webhook",
+      "name": "Responder al Backend",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1080,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Cierre Live": {
+      "main": [
+        [
+          {
+            "node": "Separar Compradores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar Compradores": {
+      "main": [
+        [
+          {
+            "node": "Crear Link MercadoPago",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Link MercadoPago": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp (Evolution API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar WhatsApp (Evolution API)": {
+      "main": [
+        [
+          {
+            "node": "Responder al Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

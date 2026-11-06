@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLiveStore } from '../store/useLiveStore';
-import { BarChart3, Download, MessageSquare, CheckCircle, PowerOff } from 'lucide-react';
+import { api } from '../services/api';
+import { BarChart3, Download, MessageSquare, PowerOff, Zap, CheckCircle2, Send, ExternalLink } from 'lucide-react';
 
 export const PostLivePage = () => {
   const {
@@ -10,6 +11,10 @@ export const PostLivePage = () => {
     cargarPedidos,
     finalizarSesion
   } = useLiveStore();
+
+  const [notificando, setNotificando] = useState(false);
+  const [webhookResultado, setWebhookResultado] = useState(null);
+  const [compradorSeleccionado, setCompradorSeleccionado] = useState(null);
 
   useEffect(() => {
     cargarSesionActiva();
@@ -61,6 +66,25 @@ export const PostLivePage = () => {
     document.body.removeChild(link);
   };
 
+  const dispararCobrosN8n = async () => {
+    if (!sesionActual?.id || listaCompradores.length === 0) return;
+    setNotificando(true);
+    setWebhookResultado(null);
+
+    try {
+      const res = await api.dispararCierreWebhook(sesionActual.id);
+      if (res.success) {
+        setWebhookResultado(res.data);
+      } else {
+        alert(res.error || 'Error al disparar webhook');
+      }
+    } catch (err) {
+      alert('Error de conexión con el backend: ' + err.message);
+    } finally {
+      setNotificando(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Cierre Banner */}
@@ -71,15 +95,24 @@ export const PostLivePage = () => {
             Cierre Post-Live y Consolidación de Cobros
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Matriz de compradores y prendas adjudicadas listas para enviar links de pago.
+            Matriz de compradores y prendas adjudicadas listas para enviar links de pago automáticos.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={dispararCobrosN8n}
+            disabled={notificando || listaCompradores.length === 0}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-emerald-600/30 transition-all cursor-pointer disabled:opacity-50"
+          >
+            <Send className="w-4 h-4" />
+            {notificando ? 'Disparando Webhook...' : 'Cobros Masivos WhatsApp (n8n)'}
+          </button>
+
           <button
             onClick={exportarCSV}
             disabled={listaCompradores.length === 0}
-            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-sm font-medium border border-slate-700 transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-700 transition-all cursor-pointer disabled:opacity-50"
           >
             <Download className="w-4 h-4" />
             Exportar CSV
@@ -88,7 +121,7 @@ export const PostLivePage = () => {
           {sesionActual?.estado === 'activa' && (
             <button
               onClick={finalizarSesion}
-              className="flex items-center gap-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer"
+              className="flex items-center gap-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 px-4 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer"
             >
               <PowerOff className="w-4 h-4" />
               Finalizar Sesión Live
@@ -96,6 +129,23 @@ export const PostLivePage = () => {
           )}
         </div>
       </div>
+
+      {/* Feedback de Webhook de Automatización n8n */}
+      {webhookResultado && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 text-emerald-300 space-y-3">
+          <div className="flex items-center gap-2 text-base font-bold text-emerald-400">
+            <CheckCircle2 className="w-5 h-5" />
+            ¡Webhook de Cierre Procesado Exitosamente!
+          </div>
+          <p className="text-sm text-slate-300">
+            Se generó el paquete de datos para <strong>{webhookResultado.payload_generado.cantidad_compradores} compradores</strong> con un monto total de <strong>${webhookResultado.payload_generado.total_ventas.toLocaleString('es-AR')}</strong>.
+          </p>
+          <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 text-xs font-mono text-slate-300 space-y-1">
+            <div><span className="text-slate-500">Estado de conexión n8n:</span> {webhookResultado.n8n_conectado ? '🟢 Conectado' : '🟡 Modo Local / Mock activo'}</div>
+            <div><span className="text-slate-500">Respuesta n8n:</span> {JSON.stringify(webhookResultado.n8n_resultado)}</div>
+          </div>
+        </div>
+      )}
 
       {/* Resumen Métricas */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -166,8 +216,14 @@ export const PostLivePage = () => {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
-                        onClick={() => alert(`Enviando notificación a @${comp.username} (Fase 6: n8n + Evolution API)`)}
-                        className="inline-flex items-center gap-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-lg text-xs font-medium cursor-pointer"
+                        onClick={() => {
+                          const mensaje = encodeURIComponent(
+                            `¡Hola @${comp.username}! 🎉 Tus prendas de la transmisión en vivo de TikTok han sido adjudicadas: ${comp.items.join(', ')}. Monto total: $${comp.total.toLocaleString('es-AR')}. Paga de forma segura aquí: https://mpago.la/demo`
+                          );
+                          window.open(`https://wa.me/?text=${mensaje}`, '_blank');
+                        }}
+                        className="inline-flex items-center gap-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-lg text-xs font-medium cursor-pointer transition-all"
+                        title="Enviar mensaje directo por WhatsApp Web"
                       >
                         <MessageSquare className="w-3.5 h-3.5" />
                         Cobrar WhatsApp

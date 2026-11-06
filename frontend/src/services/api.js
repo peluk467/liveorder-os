@@ -25,6 +25,14 @@ export const api = {
     return res.json();
   },
 
+  dispararCierreWebhook: async (sesionId) => {
+    const res = await fetch(`${API_BASE_URL}/live/${sesionId}/cierre-webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return res.json();
+  },
+
   // Productos / Inventario
   crearProducto: async ({ sesion_id, codigo_chat, stock_inicial, precio }) => {
     const res = await fetch(`${API_BASE_URL}/productos`, {
