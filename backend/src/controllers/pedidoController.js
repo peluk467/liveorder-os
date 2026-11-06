@@ -13,7 +13,8 @@ const capturarPedido = async (req, res, next) => {
       p_sesion_id: validatedData.sesion_id,
       p_codigo_chat: validatedData.codigo_chat,
       p_tiktok_username: validatedData.tiktok_username,
-      p_timestamp_llegada: validatedData.timestamp_llegada || new Date().toISOString()
+      p_timestamp_llegada: validatedData.timestamp_llegada || new Date().toISOString(),
+      p_telefono: validatedData.telefono || null
     });
 
     if (error) {
@@ -57,6 +58,7 @@ const listarPedidosPorSesion = async (req, res, next) => {
       .select(`
         id,
         tiktok_username,
+        telefono,
         timestamp_llegada,
         estado,
         created_at,

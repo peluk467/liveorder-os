@@ -1,20 +1,33 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLiveStore } from '../store/useLiveStore';
 import { api } from '../services/api';
-import { BarChart3, Download, MessageSquare, PowerOff, Zap, CheckCircle2, Send, ExternalLink } from 'lucide-react';
+import {
+  BarChart3,
+  Download,
+  MessageSquare,
+  PowerOff,
+  CheckCircle2,
+  Send,
+  RotateCcw,
+  AlertTriangle,
+  Phone
+} from 'lucide-react';
 
 export const PostLivePage = () => {
+  const navigate = useNavigate();
   const {
     sesionActual,
     pedidos,
     cargarSesionActiva,
     cargarPedidos,
-    finalizarSesion
+    finalizarSesion,
+    reiniciarPanel
   } = useLiveStore();
 
   const [notificando, setNotificando] = useState(false);
   const [webhookResultado, setWebhookResultado] = useState(null);
-  const [compradorSeleccionado, setCompradorSeleccionado] = useState(null);
+  const [mostrarModalReinicio, setMostrarModalReinicio] = useState(false);
 
   useEffect(() => {
     cargarSesionActiva();
@@ -26,18 +39,22 @@ export const PostLivePage = () => {
   const adjudicados = pedidos.filter((p) => p.estado === 'adjudicado');
   const enEspera = pedidos.filter((p) => p.estado === 'espera');
 
-  // Consolidar por comprador de TikTok (agrupación de prendas)
+  // Consolidar por comprador de TikTok (agrupación de prendas y teléfono)
   const pedidosPorComprador = adjudicados.reduce((acc, p) => {
     const user = p.tiktok_username;
     if (!acc[user]) {
       acc[user] = {
         username: user,
+        telefono: p.telefono || null,
         items: [],
         total: 0
       };
     }
     acc[user].items.push(p.productos?.codigo_chat);
     acc[user].total += Number(p.productos?.precio || 0);
+    if (!acc[user].telefono && p.telefono) {
+      acc[user].telefono = p.telefono;
+    }
     return acc;
   }, {});
 
@@ -45,9 +62,10 @@ export const PostLivePage = () => {
   const totalRecaudacion = listaCompradores.reduce((acc, c) => acc + c.total, 0);
 
   const exportarCSV = () => {
-    const headers = ['Usuario_TikTok', 'Prendas', 'Total_ARS', 'Estado'];
+    const headers = ['Usuario_TikTok', 'Telefono', 'Prendas', 'Total_ARS', 'Estado'];
     const rows = listaCompradores.map((c) => [
       `@${c.username}`,
+      c.telefono || 'Sin_Telefono',
       `"${c.items.join(', ')}"`,
       c.total,
       'Listo_Para_Cobro'
@@ -85,6 +103,31 @@ export const PostLivePage = () => {
     }
   };
 
+  const handleConfirmarReinicio = async () => {
+    await reiniciarPanel();
+    setMostrarModalReinicio(false);
+    navigate('/');
+  };
+
+  const enviarWhatsAppDirecto = (comp) => {
+    const mensaje = encodeURIComponent(
+      `🎉 ¡Hola @${comp.username}! Tus prendas del vivo fueron adjudicadas:\n\n👕 ${comp.items.join(', ')}\n💵 *Total a pagar:* $${comp.total.toLocaleString('es-AR')} ARS\n\n💳 *Link de pago seguro (MercadoPago):*\nhttps://mpago.la/demo\n\n¡Por favor indícanos tus datos para el despacho!`
+    );
+
+    if (comp.telefono) {
+      let num = comp.telefono.replace(/\D/g, '');
+      if (num.length === 10) num = '549' + num;
+      window.open(`https://wa.me/${num}?text=${mensaje}`, '_blank');
+    } else {
+      const manualNum = prompt(`El usuario @${comp.username} no especificó teléfono. Ingresa su número para WhatsApp:`);
+      if (manualNum) {
+        let num = manualNum.replace(/\D/g, '');
+        if (num.length === 10) num = '549' + num;
+        window.open(`https://wa.me/${num}?text=${mensaje}`, '_blank');
+      }
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Cierre Banner */}
@@ -100,6 +143,14 @@ export const PostLivePage = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setMostrarModalReinicio(true)}
+            className="flex items-center gap-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer"
+          >
+            <RotateCcw className="w-4 h-4" />
+            REINICIAR PANEL
+          </button>
+
           <button
             onClick={dispararCobrosN8n}
             disabled={notificando || listaCompradores.length === 0}
@@ -129,6 +180,37 @@ export const PostLivePage = () => {
           )}
         </div>
       </div>
+
+      {/* Modal Emergente de Confirmación de Reinicio */}
+      {mostrarModalReinicio && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-amber-400">
+              <div className="bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-white">¿Desea reiniciar el panel?</h3>
+            </div>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Los datos de este live se encuentran guardados y respaldados en el panel <strong>AUDITORÍA</strong>. Al reiniciar, el panel quedará en blanco listo para comenzar una nueva transmisión desde Pre-Live.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <button
+                onClick={() => setMostrarModalReinicio(false)}
+                className="px-4 py-2 rounded-xl text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmarReinicio}
+                className="px-4 py-2 rounded-xl text-sm font-semibold bg-rose-600 hover:bg-rose-500 text-white transition-all shadow-md shadow-rose-600/30 cursor-pointer"
+              >
+                Confirmar Reinicio
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Feedback de Webhook de Automatización n8n */}
       {webhookResultado && (
@@ -188,6 +270,7 @@ export const PostLivePage = () => {
                   <th className="px-4 py-3 font-semibold">Comprador</th>
                   <th className="px-4 py-3 font-semibold">Prendas Asignadas</th>
                   <th className="px-4 py-3 font-semibold">Cantidad</th>
+                  <th className="px-4 py-3 font-semibold">Número WhatsApp</th>
                   <th className="px-4 py-3 font-semibold">Monto Total</th>
                   <th className="px-4 py-3 font-semibold text-right">Acción Cobro</th>
                 </tr>
@@ -211,19 +294,23 @@ export const PostLivePage = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-slate-400">{comp.items.length} prenda(s)</td>
+                    <td className="px-4 py-3">
+                      {comp.telefono ? (
+                        <span className="inline-flex items-center gap-1.5 font-mono text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-lg">
+                          <Phone className="w-3 h-3" />
+                          {comp.telefono}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-500 italic">No especificado</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 font-bold text-emerald-400">
                       ${comp.total.toLocaleString('es-AR')}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
-                        onClick={() => {
-                          const mensaje = encodeURIComponent(
-                            `¡Hola @${comp.username}! 🎉 Tus prendas de la transmisión en vivo de TikTok han sido adjudicadas: ${comp.items.join(', ')}. Monto total: $${comp.total.toLocaleString('es-AR')}. Paga de forma segura aquí: https://mpago.la/demo`
-                          );
-                          window.open(`https://wa.me/?text=${mensaje}`, '_blank');
-                        }}
-                        className="inline-flex items-center gap-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-lg text-xs font-medium cursor-pointer transition-all"
-                        title="Enviar mensaje directo por WhatsApp Web"
+                        onClick={() => enviarWhatsAppDirecto(comp)}
+                        className="inline-flex items-center gap-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all"
                       >
                         <MessageSquare className="w-3.5 h-3.5" />
                         Cobrar WhatsApp

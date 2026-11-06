@@ -5,6 +5,7 @@ import { PreLivePage } from './pages/PreLivePage';
 import { LiveMonitorPage } from './pages/LiveMonitorPage';
 import { PostLivePage } from './pages/PostLivePage';
 import { SimuladorChatPage } from './pages/SimuladorChatPage';
+import { AuditoriaPage } from './pages/AuditoriaPage';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
             <Route path="/" element={<PreLivePage />} />
             <Route path="/monitor" element={<LiveMonitorPage />} />
             <Route path="/post-live" element={<PostLivePage />} />
+            <Route path="/auditoria" element={<AuditoriaPage />} />
             <Route path="/simulador-chat" element={<SimuladorChatPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

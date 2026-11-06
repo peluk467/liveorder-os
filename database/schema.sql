@@ -1,6 +1,5 @@
 -- ==============================================================================
 -- LiveOrder OS - Script DDL & Procedimientos Almacenados (Supabase / PostgreSQL)
--- Fase 1: Base de Datos y Lógica de Concurrencia Determinista
 -- ==============================================================================
 
 -- 1. TIPOS ENUMERADOS
@@ -48,6 +47,7 @@ CREATE TABLE IF NOT EXISTS pedidos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     producto_id UUID NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
     tiktok_username VARCHAR(100) NOT NULL,
+    telefono VARCHAR(50),
     timestamp_llegada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     estado estado_pedido_enum NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -62,20 +62,21 @@ CREATE INDEX IF NOT EXISTS idx_pedidos_username ON pedidos(tiktok_username);
 
 -- ==============================================================================
 -- 7. RPC: adjudicar_pedido_concurrente
--- Núcleo de Automatización Determinista (First-In, First-Out con Row Locking)
 -- ==============================================================================
 
 CREATE OR REPLACE FUNCTION adjudicar_pedido_concurrente(
     p_sesion_id UUID,
     p_codigo_chat VARCHAR,
     p_tiktok_username VARCHAR,
-    p_timestamp_llegada TIMESTAMPTZ DEFAULT NOW()
+    p_timestamp_llegada TIMESTAMPTZ DEFAULT NOW(),
+    p_telefono VARCHAR DEFAULT NULL
 )
 RETURNS TABLE (
     pedido_id UUID,
     producto_id UUID,
     codigo_chat VARCHAR,
     tiktok_username VARCHAR,
+    telefono VARCHAR,
     estado estado_pedido_enum,
     stock_restante INT,
     mensaje TEXT
@@ -89,8 +90,6 @@ DECLARE
     v_pedido_id UUID;
     v_mensaje TEXT;
 BEGIN
-    -- 1. Adquirir candado a nivel de fila (Row-Level Lock) en el producto exacto
-    -- Bloquea concurrentes milimétricos hasta que se complete esta transacción
     SELECT id, productos.codigo_chat, stock_disponible
     INTO v_producto
     FROM productos
@@ -98,15 +97,12 @@ BEGIN
       AND UPPER(productos.codigo_chat) = UPPER(p_codigo_chat)
     FOR UPDATE;
 
-    -- 2. Validación de existencia del producto en la sesión
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Producto con código "%" no encontrado en la sesión %', p_codigo_chat, p_sesion_id
             USING ERRCODE = 'P0002';
     END IF;
 
-    -- 3. Decisión Determinista (FIFO)
     IF v_producto.stock_disponible > 0 THEN
-        -- Hay stock: descontar y adjudicar
         UPDATE productos
         SET stock_disponible = stock_disponible - 1
         WHERE id = v_producto.id
@@ -115,33 +111,33 @@ BEGIN
         v_estado_asignado := 'adjudicado';
         v_mensaje := 'Stock reservado exitosamente (Adjudicado)';
     ELSE
-        -- Sin stock: no descuenta, va a lista de espera
         v_stock_final := 0;
         v_estado_asignado := 'espera';
         v_mensaje := 'Sin stock disponible. Ingresado a lista de espera';
     END IF;
 
-    -- 4. Registrar el pedido con auditoría de tiempo
     INSERT INTO pedidos (
         producto_id,
         tiktok_username,
         timestamp_llegada,
-        estado
+        estado,
+        telefono
     )
     VALUES (
         v_producto.id,
         p_tiktok_username,
         p_timestamp_llegada,
-        v_estado_asignado
+        v_estado_asignado,
+        p_telefono
     )
     RETURNING id INTO v_pedido_id;
 
-    -- 5. Retornar el resultado estructurado
     RETURN QUERY SELECT 
         v_pedido_id,
         v_producto.id,
         v_producto.codigo_chat,
         p_tiktok_username,
+        p_telefono,
         v_estado_asignado,
         v_stock_final,
         v_mensaje;

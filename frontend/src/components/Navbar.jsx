@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Radio, Package, BarChart3, MessageSquare } from 'lucide-react';
+import { Radio, Package, BarChart3, MessageSquare, History } from 'lucide-react';
 import { useLiveStore } from '../store/useLiveStore';
 
 export const Navbar = () => {
@@ -65,6 +65,20 @@ export const Navbar = () => {
           >
             <BarChart3 className="w-4 h-4" />
             Post-Live (Cierre)
+          </NavLink>
+
+          <NavLink
+            to="/auditoria"
+            className={({ isActive }) =>
+              `flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                isActive
+                  ? 'bg-purple-600 text-white shadow-sm shadow-purple-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`
+            }
+          >
+            <History className="w-4 h-4" />
+            Auditoría
           </NavLink>
 
           <NavLink

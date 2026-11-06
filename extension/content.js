@@ -102,7 +102,14 @@
     const datos = extraerDatosMensaje(nodo);
     if (!datos) return;
 
-    const match = datos.texto.match(regexCompra);
+    // 1. Extraer teléfono si está presente (8 a 13 dígitos)
+    const matchTel = datos.texto.match(/(?:\+?\d{1,3})?\s*(?:9\s*)?(\d{8,12})\b/);
+    const telefono = matchTel ? matchTel[0].replace(/\s+/g, '') : null;
+
+    // 2. Extraer código de prenda aislando el teléfono
+    const textoSinTel = matchTel ? datos.texto.replace(matchTel[0], ' ') : datos.texto;
+    const match = textoSinTel.match(regexCompra);
+
     if (match && match[1]) {
       const codigoPrenda = match[1].trim().toUpperCase();
 
@@ -113,7 +120,7 @@
 
       const timestampLlegada = new Date().toISOString();
 
-      console.log(`🎯 [LiveOrder OS] Intención detectada: ${datos.username} -> ${codigoPrenda} (${timestampLlegada})`);
+      console.log(`🎯 [LiveOrder OS] Intención detectada: ${datos.username} -> ${codigoPrenda} | Tel: ${telefono || 'N/A'}`);
 
       // Enviar al Background Worker para procesar vía API
       chrome.runtime.sendMessage(
@@ -124,6 +131,7 @@
             sesion_id: configuracion.sesionId,
             codigo_chat: codigoPrenda,
             tiktok_username: datos.username,
+            telefono: telefono,
             timestamp_llegada: timestampLlegada
           }
         },
@@ -132,7 +140,7 @@
             pedidosCapturadosCount++;
             mostrarNotificacionOverlay(
               response.data.data.estado === 'adjudicado' ? 'success' : 'warning',
-              `@${datos.username} -> ${codigoPrenda}: ${response.data.data.estado.toUpperCase()}`
+              `@${datos.username} -> ${codigoPrenda} ${telefono ? `(${telefono})` : ''}: ${response.data.data.estado.toUpperCase()}`
             );
             actualizarHUD();
           } else {

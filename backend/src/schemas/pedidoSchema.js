@@ -9,7 +9,12 @@ const capturaPedidoSchema = z.object({
   tiktok_username: z
     .string()
     .min(1, { message: 'tiktok_username es requerido' })
-    .transform((val) => val.trim().replace(/^@/, '')), // Remueve arroba si viene del chat
+    .transform((val) => val.trim().replace(/^@/, '')),
+  telefono: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => (val ? val.trim().replace(/[^\d+]/g, '') : null)),
   timestamp_llegada: z
     .string()
     .datetime({ message: 'timestamp_llegada debe ser una fecha ISO válida' })

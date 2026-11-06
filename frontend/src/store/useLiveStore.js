@@ -10,6 +10,7 @@ export const useLiveStore = create(
       sesionActual: null,
       productos: [],
       pedidos: [],
+      historialAuditoria: [],
       mensajesSimulador: [
         { id: 1, usuario: 'tiktok_fan_99', texto: 'Hola qué tal!' },
         { id: 2, usuario: 'mari_moda', texto: 'Qué talles tienen?' }
@@ -146,14 +147,15 @@ export const useLiveStore = create(
       },
 
       // Capturar pedido
-      capturarPedido: async ({ codigo_chat, tiktok_username }) => {
+      capturarPedido: async ({ codigo_chat, tiktok_username, telefono }) => {
         const { sesionActual } = get();
         if (!sesionActual) return { success: false, error: 'No hay sesión activa' };
         try {
           const res = await api.capturarPedido({
             sesion_id: sesionActual.id,
             codigo_chat,
-            tiktok_username
+            tiktok_username,
+            telefono: telefono || null
           });
           if (res.success) {
             await get().cargarCatalogo(sesionActual.id);
@@ -164,6 +166,35 @@ export const useLiveStore = create(
         } catch (err) {
           return { success: false, error: err.message };
         }
+      },
+
+      // Cargar historial completo para el Panel de Auditoría
+      cargarHistorialAuditoria: async () => {
+        const { vendedorId } = get();
+        try {
+          const res = await api.obtenerHistorialAuditoria(vendedorId);
+          if (res.success) {
+            set({ historialAuditoria: res.data });
+          }
+        } catch (err) {
+          console.error('Error al cargar historial de auditoría:', err);
+        }
+      },
+
+      // Reiniciar panel post-live (limpia la sesión activa y prepara para nuevo live)
+      reiniciarPanel: async () => {
+        const { sesionActual } = get();
+        if (sesionActual?.id && sesionActual.estado === 'activa') {
+          try {
+            await api.actualizarEstadoSesion(sesionActual.id, 'finalizada');
+          } catch (_) {}
+        }
+        set({
+          sesionActual: null,
+          productos: [],
+          pedidos: [],
+          mensajesSimulador: []
+        });
       },
 
       // Mensajes del simulador persistentes

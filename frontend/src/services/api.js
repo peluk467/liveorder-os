@@ -16,6 +16,11 @@ export const api = {
     return res.json();
   },
 
+  obtenerHistorialAuditoria: async (vendedorId) => {
+    const res = await fetch(`${API_BASE_URL}/live/historial/${vendedorId}`);
+    return res.json();
+  },
+
   actualizarEstadoSesion: async (sesionId, estado) => {
     const res = await fetch(`${API_BASE_URL}/live/${sesionId}/estado`, {
       method: 'PATCH',
@@ -58,11 +63,11 @@ export const api = {
   },
 
   // Pedidos en Vivo
-  capturarPedido: async ({ sesion_id, codigo_chat, tiktok_username }) => {
+  capturarPedido: async ({ sesion_id, codigo_chat, tiktok_username, telefono }) => {
     const res = await fetch(`${API_BASE_URL}/pedidos/captura`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sesion_id, codigo_chat, tiktok_username })
+      body: JSON.stringify({ sesion_id, codigo_chat, tiktok_username, telefono })
     });
     return res.json();
   },

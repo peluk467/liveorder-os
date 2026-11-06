@@ -13,8 +13,28 @@ export const SimuladorChatPage = () => {
   } = useLiveStore();
 
   const [nuevoUsuario, setNuevoUsuario] = useState('comprador_live');
-  const [nuevoTexto, setNuevoTexto] = useState('Mío R38');
+  const [nuevoTexto, setNuevoTexto] = useState('Mío R38 388123456');
   const [enviando, setEnviando] = useState(false);
+
+  const parsearComentarioCompra = (texto) => {
+    if (!texto) return null;
+
+    // 1. Extraer teléfono si está presente (8 a 13 dígitos)
+    const matchTel = texto.match(/(?:\+?\d{1,3})?\s*(?:9\s*)?(\d{8,12})\b/);
+    const telefono = matchTel ? matchTel[0].replace(/\s+/g, '') : null;
+
+    // 2. Extraer código de prenda aislando el teléfono
+    const textoSinTel = matchTel ? texto.replace(matchTel[0], ' ') : texto;
+    const matchCodigo = textoSinTel.match(/(?:^|\b)(?:m[ií]o|quiero|lo\s+quiero|pido)?\s*([A-Za-z]{0,3}\d{1,4}[A-Za-z]?)\b/i);
+
+    if (matchCodigo && matchCodigo[1]) {
+      const codigo = matchCodigo[1].trim().toUpperCase();
+      if (!['HOLA', 'LIVE', 'TIKTOK', 'GRACIAS', 'SI', 'NO'].includes(codigo)) {
+        return { codigo, telefono };
+      }
+    }
+    return null;
+  };
 
   const procesarMensaje = async (usuario, texto) => {
     // 1. Guardar y pintar en el DOM
@@ -24,16 +44,14 @@ export const SimuladorChatPage = () => {
       texto
     });
 
-    // 2. Extraer intención de compra determinista
-    const regex = /(?:^|\b)(?:m[ií]o|quiero|lo\s+quiero|pido)?\s*([A-Za-z0-9_-]{1,10})\b/i;
-    const match = texto.match(regex);
+    // 2. Extraer intención determinista (prenda + teléfono de WhatsApp)
+    const datosCompra = parsearComentarioCompra(texto);
 
-    if (match && match[1] && sesionActual) {
-      const codigo = match[1].trim().toUpperCase();
-      // Enviar directamente al backend (garantiza captura inmediata tanto con extensión como sin ella)
+    if (datosCompra && sesionActual) {
       await capturarPedido({
-        codigo_chat: codigo,
-        tiktok_username: usuario
+        codigo_chat: datosCompra.codigo,
+        tiktok_username: usuario,
+        telefono: datosCompra.telefono
       });
     }
   };
@@ -48,11 +66,18 @@ export const SimuladorChatPage = () => {
   };
 
   const simularRafagaConcurrente = (codigo) => {
-    const usuarios = ['lucas_buyer', 'carolina_trendy', 'agustin_23', 'valentina_chic', 'marcos_live'];
-    usuarios.forEach((usr, index) => {
+    const usuarios = [
+      { user: 'lucas_buyer', tel: '3884112233' },
+      { user: 'carolina_trendy', tel: '3885998877' },
+      { user: 'agustin_23', tel: '3884001122' },
+      { user: 'valentina_chic', tel: '3886554433' },
+      { user: 'marcos_live', tel: '3887112233' }
+    ];
+
+    usuarios.forEach((item, index) => {
       setTimeout(() => {
-        procesarMensaje(usr, `Mío ${codigo}`);
-      }, index * 250); // Simula la llegada milimétrica en vivo
+        procesarMensaje(item.user, `Mío ${codigo} ${item.tel}`);
+      }, index * 250);
     });
   };
 

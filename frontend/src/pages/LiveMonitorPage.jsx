@@ -134,6 +134,7 @@ export const LiveMonitorPage = () => {
                   <tr>
                     <th className="px-4 py-3">Timestamp</th>
                     <th className="px-4 py-3">Usuario TikTok</th>
+                    <th className="px-4 py-3">WhatsApp / Tel</th>
                     <th className="px-4 py-3">Código</th>
                     <th className="px-4 py-3">Precio</th>
                     <th className="px-4 py-3">Resolución</th>
@@ -152,6 +153,9 @@ export const LiveMonitorPage = () => {
                       </td>
                       <td className="px-4 py-3 font-medium text-white">
                         @{pedido.tiktok_username}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-emerald-400">
+                        {pedido.telefono || <span className="text-slate-600">-</span>}
                       </td>
                       <td className="px-4 py-3 font-mono font-bold text-indigo-400">
                         {pedido.productos?.codigo_chat}

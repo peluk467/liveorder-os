@@ -193,9 +193,121 @@ const dispararWebhookCierre = async (req, res, next) => {
   }
 };
 
+/**
+ * Listar todo el historial de lives para el Panel de Auditoría
+ */
+const listarHistorialAuditoria = async (req, res, next) => {
+  try {
+    const { vendedorId } = req.params;
+
+    // 1. Obtener todas las sesiones del vendedor ordenadas por fecha reciente
+    const { data: sesiones, error: errorSesiones } = await supabase
+      .from('sesiones_live')
+      .select('*')
+      .eq('vendedor_id', vendedorId)
+      .order('created_at', { ascending: false });
+
+    if (errorSesiones) throw errorSesiones;
+
+    if (!sesiones || sesiones.length === 0) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    const sesionIds = sesiones.map(s => s.id);
+
+    // 2. Obtener productos de esas sesiones
+    const { data: productos, error: errorProds } = await supabase
+      .from('productos')
+      .select('*')
+      .in('sesion_id', sesionIds);
+
+    if (errorProds) throw errorProds;
+
+    // 3. Obtener todos los pedidos
+    const prodIds = (productos || []).map(p => p.id);
+    let pedidos = [];
+    if (prodIds.length > 0) {
+      const { data: pedidosData, error: errorPedidos } = await supabase
+        .from('pedidos')
+        .select(`
+          id,
+          producto_id,
+          tiktok_username,
+          telefono,
+          timestamp_llegada,
+          estado,
+          created_at,
+          productos (
+            codigo_chat,
+            precio,
+            sesion_id
+          )
+        `)
+        .in('producto_id', prodIds)
+        .order('timestamp_llegada', { ascending: true });
+
+      if (errorPedidos) throw errorPedidos;
+      pedidos = pedidosData || [];
+    }
+
+    // 4. Mapear y consolidar la información por sesión
+    const historial = sesiones.map(sesion => {
+      const prodsSesion = (productos || []).filter(p => p.sesion_id === sesion.id);
+      const pedidosSesion = pedidos.filter(p => p.productos?.sesion_id === sesion.id);
+      const adjudicados = pedidosSesion.filter(p => p.estado === 'adjudicado');
+      const enEspera = pedidosSesion.filter(p => p.estado === 'espera');
+
+      // Agrupar compradores
+      const compradoresMap = {};
+      adjudicados.forEach(p => {
+        const u = p.tiktok_username;
+        if (!compradoresMap[u]) {
+          compradoresMap[u] = {
+            username: u,
+            telefono: p.telefono || null,
+            items: [],
+            total: 0,
+            primera_compra: p.timestamp_llegada
+          };
+        }
+        compradoresMap[u].items.push(p.productos?.codigo_chat);
+        compradoresMap[u].total += Number(p.productos?.precio || 0);
+        // Si no tenía teléfono y este pedido sí, actualizarlo
+        if (!compradoresMap[u].telefono && p.telefono) {
+          compradoresMap[u].telefono = p.telefono;
+        }
+      });
+
+      const listaCompradores = Object.values(compradoresMap);
+      const totalRecaudado = listaCompradores.reduce((sum, c) => sum + c.total, 0);
+
+      return {
+        id: sesion.id,
+        estado: sesion.estado,
+        fecha_hora_inicio: sesion.created_at,
+        total_ventas: totalRecaudado,
+        prendas_adjudicadas: adjudicados.length,
+        demanda_espera: enEspera.length,
+        total_compradores: listaCompradores.length,
+        productos: prodsSesion,
+        pedidos: pedidosSesion,
+        compradores: listaCompradores
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: historial
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   crearSesion,
   obtenerSesionActiva,
   actualizarEstadoSesion,
-  dispararWebhookCierre
+  dispararWebhookCierre,
+  listarHistorialAuditoria
 };
