@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "LiveOrder OS - TikTok Live Auditor",
+  "version": "1.0.0",
+  "description": "Captura y adjudicación determinista de pedidos en tiempo real desde el chat de TikTok Live.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "*://*.tiktok.com/*",
+    "http://localhost:3000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.tiktok.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "LiveOrder OS Controller"
+  }
+}
