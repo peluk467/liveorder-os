@@ -1,40 +1,58 @@
 import React, { useState } from 'react';
 import { useLiveStore } from '../store/useLiveStore';
-import { MessageSquare, Send, Sparkles, AlertTriangle } from 'lucide-react';
+import { MessageSquare, Send, Sparkles, AlertTriangle, Trash2 } from 'lucide-react';
 
 export const SimuladorChatPage = () => {
-  const { productos, sesionActual } = useLiveStore();
-  const [mensajes, setMensajes] = useState([
-    { id: 1, usuario: 'tiktok_fan_99', texto: 'Hola qué tal!' },
-    { id: 2, usuario: 'mari_moda', texto: 'Qué talles tienen?' }
-  ]);
+  const {
+    productos,
+    sesionActual,
+    mensajesSimulador,
+    agregarMensajeSimulador,
+    limpiarMensajesSimulador,
+    capturarPedido
+  } = useLiveStore();
+
   const [nuevoUsuario, setNuevoUsuario] = useState('comprador_live');
   const [nuevoTexto, setNuevoTexto] = useState('Mío R38');
+  const [enviando, setEnviando] = useState(false);
 
-  const agregarMensajeAlDOM = (usuario, texto) => {
-    setMensajes((prev) => [
-      ...prev,
-      {
-        id: Date.now() + Math.random(),
-        usuario,
-        texto
-      }
-    ]);
+  const procesarMensaje = async (usuario, texto) => {
+    // 1. Guardar y pintar en el DOM
+    agregarMensajeSimulador({
+      id: Date.now() + Math.random(),
+      usuario,
+      texto
+    });
+
+    // 2. Extraer intención de compra determinista
+    const regex = /(?:^|\b)(?:m[ií]o|quiero|lo\s+quiero|pido)?\s*([A-Za-z0-9_-]{1,10})\b/i;
+    const match = texto.match(regex);
+
+    if (match && match[1] && sesionActual) {
+      const codigo = match[1].trim().toUpperCase();
+      // Enviar directamente al backend (garantiza captura inmediata tanto con extensión como sin ella)
+      await capturarPedido({
+        codigo_chat: codigo,
+        tiktok_username: usuario
+      });
+    }
   };
 
-  const handleEnviar = (e) => {
+  const handleEnviar = async (e) => {
     e.preventDefault();
-    if (!nuevoTexto.trim()) return;
-    agregarMensajeAlDOM(nuevoUsuario, nuevoTexto);
+    if (!nuevoTexto.trim() || enviando) return;
+    setEnviando(true);
+    await procesarMensaje(nuevoUsuario, nuevoTexto);
     setNuevoTexto('');
+    setEnviando(false);
   };
 
   const simularRafagaConcurrente = (codigo) => {
     const usuarios = ['lucas_buyer', 'carolina_trendy', 'agustin_23', 'valentina_chic', 'marcos_live'];
     usuarios.forEach((usr, index) => {
       setTimeout(() => {
-        agregarMensajeAlDOM(usr, `Mío ${codigo}`);
-      }, index * 200); // 200ms entre cada mensaje simulando un chat en vivo real
+        procesarMensaje(usr, `Mío ${codigo}`);
+      }, index * 250); // Simula la llegada milimétrica en vivo
     });
   };
 
@@ -46,12 +64,24 @@ export const SimuladorChatPage = () => {
           <div className="bg-indigo-500/10 p-3 rounded-xl text-indigo-400 border border-indigo-500/20">
             <Sparkles className="w-6 h-6" />
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">
-              Entorno de Pruebas: Simulación del DOM de TikTok Live
-            </h1>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-bold text-white">
+                Entorno de Pruebas: Simulación del DOM de TikTok Live
+              </h1>
+              {mensajesSimulador.length > 0 && (
+                <button
+                  onClick={limpiarMensajesSimulador}
+                  className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-400 p-1.5 rounded-lg border border-slate-800 hover:border-red-500/30 transition-all cursor-pointer"
+                  title="Vaciar chat"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Limpiar Chat
+                </button>
+              )}
+            </div>
             <p className="text-slate-400 text-sm mt-1">
-              Esta pantalla emite nodos idénticos al chat real de TikTok. Si la <strong>Extensión de Chrome</strong> está cargada y activa en el navegador, verás el badge flotante <strong>"LiveOrder OS: Auditando Chat"</strong> abajo a la derecha y los pedidos se adjudicarán automáticamente por el MutationObserver.
+              Los mensajes se mantienen persistentes y se procesan automáticamente con el algoritmo determinista FIFO.
             </p>
           </div>
         </div>
@@ -72,12 +102,12 @@ export const SimuladorChatPage = () => {
               <MessageSquare className="w-4 h-4 text-pink-500" />
               TikTok Live Chat DOM
             </span>
-            <span className="text-xs text-slate-500">{mensajes.length} mensajes en buffer</span>
+            <span className="text-xs text-slate-500">{mensajesSimulador.length} mensajes en buffer</span>
           </div>
 
           {/* Área de mensajes con selectores que lee content.js */}
           <div id="tiktok-chat-container" className="flex-1 overflow-y-auto py-4 space-y-3 font-sans">
-            {mensajes.map((m) => (
+            {mensajesSimulador.map((m) => (
               <div
                 key={m.id}
                 className="chat-message-item bg-slate-900/50 border border-slate-800/80 rounded-xl px-3.5 py-2 text-sm flex items-start gap-2.5 transition-all"
@@ -89,7 +119,7 @@ export const SimuladorChatPage = () => {
                   data-e2e="chat-message-user-name"
                   className="font-semibold text-pink-400 hover:underline shrink-0"
                 >
-                  @{m.usuario}
+                  @{m.usuario}:
                 </a>
                 <span className="text-slate-200 break-words">{m.texto}</span>
               </div>
@@ -114,7 +144,8 @@ export const SimuladorChatPage = () => {
             />
             <button
               type="submit"
-              className="bg-pink-600 hover:bg-pink-500 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              disabled={enviando || !sesionActual}
+              className="bg-pink-600 hover:bg-pink-500 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
             >
               <Send className="w-4 h-4" />
               Comentar
@@ -142,7 +173,8 @@ export const SimuladorChatPage = () => {
                   <button
                     key={prod.id}
                     onClick={() => simularRafagaConcurrente(prod.codigo_chat)}
-                    className="w-full text-left bg-slate-950 hover:bg-slate-800/80 border border-slate-800 p-3 rounded-xl transition-all cursor-pointer flex items-center justify-between"
+                    disabled={!sesionActual}
+                    className="w-full text-left bg-slate-950 hover:bg-slate-800/80 border border-slate-800 p-3 rounded-xl transition-all cursor-pointer flex items-center justify-between disabled:opacity-50"
                   >
                     <div>
                       <span className="font-mono font-bold text-white text-sm">{prod.codigo_chat}</span>

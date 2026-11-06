@@ -10,6 +10,10 @@ export const useLiveStore = create(
       sesionActual: null,
       productos: [],
       pedidos: [],
+      mensajesSimulador: [
+        { id: 1, usuario: 'tiktok_fan_99', texto: 'Hola qué tal!' },
+        { id: 2, usuario: 'mari_moda', texto: 'Qué talles tienen?' }
+      ],
       cargando: false,
       error: null,
 
@@ -160,6 +164,17 @@ export const useLiveStore = create(
         } catch (err) {
           return { success: false, error: err.message };
         }
+      },
+
+      // Mensajes del simulador persistentes
+      agregarMensajeSimulador: (msg) => {
+        set((state) => ({
+          mensajesSimulador: [...state.mensajesSimulador, msg]
+        }));
+      },
+
+      limpiarMensajesSimulador: () => {
+        set({ mensajesSimulador: [] });
       }
     }),
     {
@@ -167,7 +182,8 @@ export const useLiveStore = create(
       partialize: (state) => ({
         vendedorId: state.vendedorId,
         sesionActual: state.sesionActual,
-        productos: state.productos
+        productos: state.productos,
+        mensajesSimulador: state.mensajesSimulador
       })
     }
   )

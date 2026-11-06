@@ -59,27 +59,31 @@
   function extraerDatosMensaje(nodo) {
     if (!nodo || nodo.nodeType !== Node.ELEMENT_NODE) return null;
 
-    // TikTok usa diferentes selectores según la versión del player web
-    // Buscamos contenedores de mensaje o texto común
     const textoCompleto = nodo.innerText || nodo.textContent || '';
     if (!textoCompleto.trim()) return null;
 
-    // Intentar buscar username por etiquetas comunes o enlaces de perfil
     let username = 'comprador_anonimo';
     const linkUsuario = nodo.querySelector('a[href*="/@"]') || nodo.querySelector('[data-e2e="chat-message-user-name"]');
     if (linkUsuario) {
       username = linkUsuario.innerText.trim().replace(/^@/, '');
     } else {
-      // Fallback: Si el formato es "Username: Comentario"
       const partes = textoCompleto.split(':');
       if (partes.length > 1) {
         username = partes[0].trim().replace(/^@/, '');
       }
     }
 
+    // Remover el nombre de usuario del texto para evaluar solo el cuerpo del mensaje
+    let mensajeLimpio = textoCompleto;
+    if (linkUsuario) {
+      mensajeLimpio = textoCompleto.replace(linkUsuario.innerText, '').trim();
+    } else if (textoCompleto.includes(':')) {
+      mensajeLimpio = textoCompleto.split(':').slice(1).join(':').trim();
+    }
+
     return {
       username,
-      texto: textoCompleto
+      texto: mensajeLimpio
     };
   }
 
