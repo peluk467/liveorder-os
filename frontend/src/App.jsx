@@ -4,6 +4,7 @@ import { Navbar } from './components/Navbar';
 import { PreLivePage } from './pages/PreLivePage';
 import { LiveMonitorPage } from './pages/LiveMonitorPage';
 import { PostLivePage } from './pages/PostLivePage';
+import { SimuladorChatPage } from './pages/SimuladorChatPage';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
             <Route path="/" element={<PreLivePage />} />
             <Route path="/monitor" element={<LiveMonitorPage />} />
             <Route path="/post-live" element={<PostLivePage />} />
+            <Route path="/simulador-chat" element={<SimuladorChatPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
