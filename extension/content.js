@@ -108,15 +108,21 @@
 
     // 2. Extraer código de prenda aislando el teléfono
     const textoSinTel = matchTel ? datos.texto.replace(matchTel[0], ' ') : datos.texto;
-    const match = textoSinTel.match(regexCompra);
+    const textoLimpio = textoSinTel
+      .replace(/(?:^|\b)(?:m[ií]o|quiero|lo\s+quiero|pido|yo)\b/gi, '')
+      .trim();
 
-    if (match && match[1]) {
-      const codigoPrenda = match[1].trim().toUpperCase();
+    const tokens = textoLimpio.split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return;
 
-      // Descartar palabras comunes que coincidan accidentalmente
-      if (['HOLA', 'LIVE', 'TIKTOK', 'GRACIAS', 'SI', 'NO'].includes(codigoPrenda)) {
-        return;
-      }
+    const codigoPrenda = tokens[0].trim().toUpperCase();
+
+    // Descartar palabras conversacionales comunes
+    if (['HOLA', 'LIVE', 'TIKTOK', 'GRACIAS', 'SI', 'NO', 'BUENAS'].includes(codigoPrenda)) {
+      return;
+    }
+
+    if (codigoPrenda) {
 
       const timestampLlegada = new Date().toISOString();
 

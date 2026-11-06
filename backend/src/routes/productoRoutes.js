@@ -4,6 +4,7 @@ const {
   crearProducto,
   listarProductosPorSesion,
   actualizarProducto,
+  eliminarProducto,
   clonarUltimoCatalogo
 } = require('../controllers/productoController');
 
@@ -18,5 +19,8 @@ router.get('/sesion/:sesionId', listarProductosPorSesion);
 
 // PATCH /api/productos/:id - Modificar stock disponible o precio
 router.patch('/:id', actualizarProducto);
+
+// DELETE /api/productos/:id - Eliminar producto del inventario
+router.delete('/:id', eliminarProducto);
 
 module.exports = router;

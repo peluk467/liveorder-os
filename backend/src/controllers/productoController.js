@@ -93,6 +93,29 @@ const actualizarProducto = async (req, res, next) => {
 };
 
 /**
+ * Eliminar un producto del inventario
+ */
+const eliminarProducto = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const { error } = await supabase
+      .from('productos')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      success: true,
+      message: 'Producto eliminado correctamente'
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * Clonar productos de la sesión anterior a la sesión actual
  */
 const clonarUltimoCatalogo = async (req, res, next) => {
@@ -162,5 +185,6 @@ module.exports = {
   crearProducto,
   listarProductosPorSesion,
   actualizarProducto,
+  eliminarProducto,
   clonarUltimoCatalogo
 };

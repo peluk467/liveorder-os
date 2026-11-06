@@ -113,10 +113,15 @@ export const useLiveStore = create(
         }
       },
 
-      // Agregar producto al catálogo
+      // Agregar producto al catálogo (se puede cargar antes o durante el live)
       agregarProducto: async ({ codigo_chat, stock_inicial, precio }) => {
-        const { sesionActual } = get();
-        if (!sesionActual) return { success: false, error: 'No hay sesión activa' };
+        let { sesionActual } = get();
+        if (!sesionActual) {
+          await get().iniciarSesion();
+          sesionActual = get().sesionActual;
+        }
+        if (!sesionActual) return { success: false, error: 'No se pudo inicializar la sesión para el stock' };
+
         try {
           const res = await api.crearProducto({
             sesion_id: sesionActual.id,
@@ -126,6 +131,38 @@ export const useLiveStore = create(
           });
           if (res.success) {
             set((state) => ({ productos: [...state.productos, res.data] }));
+            return { success: true };
+          }
+          return { success: false, error: res.error };
+        } catch (err) {
+          return { success: false, error: err.message };
+        }
+      },
+
+      // Editar producto
+      editarProducto: async (id, datos) => {
+        try {
+          const res = await api.actualizarProducto(id, datos);
+          if (res.success && res.data) {
+            set((state) => ({
+              productos: state.productos.map((p) => (p.id === id ? res.data : p))
+            }));
+            return { success: true };
+          }
+          return { success: false, error: res.error };
+        } catch (err) {
+          return { success: false, error: err.message };
+        }
+      },
+
+      // Eliminar producto
+      eliminarProducto: async (id) => {
+        try {
+          const res = await api.eliminarProducto(id);
+          if (res.success) {
+            set((state) => ({
+              productos: state.productos.filter((p) => p.id !== id)
+            }));
             return { success: true };
           }
           return { success: false, error: res.error };
@@ -181,7 +218,7 @@ export const useLiveStore = create(
         }
       },
 
-      // Reiniciar panel post-live (limpia la sesión activa y prepara para nuevo live)
+      // Reiniciar panel post-live (limpia la sesión activa y prepara para nuevo live, preservando el stock)
       reiniciarPanel: async () => {
         const { sesionActual } = get();
         if (sesionActual?.id && sesionActual.estado === 'activa') {
@@ -191,7 +228,6 @@ export const useLiveStore = create(
         }
         set({
           sesionActual: null,
-          productos: [],
           pedidos: [],
           mensajesSimulador: []
         });

@@ -17,6 +17,13 @@ const crearProductoSchema = z.object({
 });
 
 const actualizarProductoSchema = z.object({
+  codigo_chat: z
+    .string()
+    .min(1)
+    .max(50)
+    .transform((val) => val.trim().toUpperCase())
+    .optional(),
+  stock_inicial: z.number().int().nonnegative().optional(),
   stock_disponible: z.number().int().nonnegative().optional(),
   precio: z.number().nonnegative().optional()
 });

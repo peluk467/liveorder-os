@@ -53,6 +53,22 @@ export const api = {
     return res.json();
   },
 
+  actualizarProducto: async (id, datos) => {
+    const res = await fetch(`${API_BASE_URL}/productos/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(datos)
+    });
+    return res.json();
+  },
+
+  eliminarProducto: async (id) => {
+    const res = await fetch(`${API_BASE_URL}/productos/${id}`, {
+      method: 'DELETE'
+    });
+    return res.json();
+  },
+
   clonarUltimoCatalogo: async (sesionActualId, vendedorId) => {
     const res = await fetch(`${API_BASE_URL}/productos/clonar-anterior`, {
       method: 'POST',
