@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLiveStore } from '../store/useLiveStore';
-import { Package, Plus, Play, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Package, Plus, Play, CheckCircle2, AlertCircle, RotateCcw } from 'lucide-react';
 
 export const PreLivePage = () => {
   const {
@@ -9,7 +9,8 @@ export const PreLivePage = () => {
     cargando,
     cargarSesionActiva,
     iniciarSesion,
-    agregarProducto
+    agregarProducto,
+    importarCatalogoAnterior
   } = useLiveStore();
 
   const [codigo, setCodigo] = useState('');
@@ -17,6 +18,7 @@ export const PreLivePage = () => {
   const [precio, setPrecio] = useState('');
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
+  const [importLoading, setImportLoading] = useState(false);
 
   useEffect(() => {
     cargarSesionActiva();
@@ -48,6 +50,19 @@ export const PreLivePage = () => {
     }
   };
 
+  const handleImportarAnterior = async () => {
+    setImportLoading(true);
+    setFormSuccess('');
+    setFormError('');
+    const res = await importarCatalogoAnterior();
+    setImportLoading(false);
+    if (res.success) {
+      setFormSuccess(`Se importaron ${res.count} productos del live anterior con éxito.`);
+    } else {
+      setFormError(res.error || 'No se pudieron importar productos.');
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Header / Session Action */}
@@ -62,21 +77,34 @@ export const PreLivePage = () => {
           </p>
         </div>
 
-        {!sesionActual || sesionActual.estado === 'finalizada' ? (
-          <button
-            onClick={iniciarSesion}
-            disabled={cargando}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
-          >
-            <Play className="w-4 h-4 fill-white" />
-            Crear Nueva Sesión Live
-          </button>
-        ) : (
-          <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl text-emerald-400 text-sm">
-            <CheckCircle2 className="w-5 h-5" />
-            <span>Sesión Activa: <strong className="font-mono">{sesionActual.id.slice(0, 8)}...</strong></span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {!sesionActual || sesionActual.estado === 'finalizada' ? (
+            <button
+              onClick={iniciarSesion}
+              disabled={cargando}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+            >
+              <Play className="w-4 h-4 fill-white" />
+              Crear Nueva Sesión Live
+            </button>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-2 rounded-xl text-emerald-400 text-sm">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Sesión Activa: <strong className="font-mono">{sesionActual.id.slice(0, 8)}</strong></span>
+              </div>
+              <button
+                onClick={handleImportarAnterior}
+                disabled={importLoading}
+                className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-xl text-sm font-medium border border-slate-700 transition-all cursor-pointer"
+                title="Copia los productos de tu transmisión anterior para no cargarlos de cero"
+              >
+                <RotateCcw className="w-4 h-4" />
+                {importLoading ? 'Importando...' : 'Reutilizar Catálogo Anterior'}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

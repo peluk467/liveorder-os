@@ -40,6 +40,15 @@ export const api = {
     return res.json();
   },
 
+  clonarUltimoCatalogo: async (sesionActualId, vendedorId) => {
+    const res = await fetch(`${API_BASE_URL}/productos/clonar-anterior`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sesionActualId, vendedorId })
+    });
+    return res.json();
+  },
+
   // Pedidos en Vivo
   capturarPedido: async ({ sesion_id, codigo_chat, tiktok_username }) => {
     const res = await fetch(`${API_BASE_URL}/pedidos/captura`, {

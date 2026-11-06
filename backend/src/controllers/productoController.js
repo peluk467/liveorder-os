@@ -92,8 +92,75 @@ const actualizarProducto = async (req, res, next) => {
   }
 };
 
+/**
+ * Clonar productos de la sesión anterior a la sesión actual
+ */
+const clonarUltimoCatalogo = async (req, res, next) => {
+  try {
+    const { sesionActualId, vendedorId } = req.body;
+
+    const { data: ultimasSesiones } = await supabase
+      .from('sesiones_live')
+      .select('id')
+      .eq('vendedor_id', vendedorId)
+      .neq('id', sesionActualId)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (!ultimasSesiones || ultimasSesiones.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'No hay sesiones anteriores para importar catálogo'
+      });
+    }
+
+    let productosAClonar = [];
+    for (const sesion of ultimasSesiones) {
+      const { data: prods } = await supabase
+        .from('productos')
+        .select('codigo_chat, stock_inicial, precio')
+        .eq('sesion_id', sesion.id);
+
+      if (prods && prods.length > 0) {
+        productosAClonar = prods;
+        break;
+      }
+    }
+
+    if (productosAClonar.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'No se encontraron productos en sesiones previas'
+      });
+    }
+
+    const nuevos = productosAClonar.map(p => ({
+      sesion_id: sesionActualId,
+      codigo_chat: p.codigo_chat,
+      stock_inicial: p.stock_inicial,
+      stock_disponible: p.stock_inicial,
+      precio: p.precio
+    }));
+
+    const { data, error } = await supabase
+      .from('productos')
+      .upsert(nuevos, { onConflict: 'sesion_id,codigo_chat' })
+      .select();
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      success: true,
+      data
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   crearProducto,
   listarProductosPorSesion,
-  actualizarProducto
+  actualizarProducto,
+  clonarUltimoCatalogo
 };
