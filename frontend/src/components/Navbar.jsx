@@ -15,7 +15,7 @@ export const Navbar = () => {
           <img
             src="/logo.png"
             alt="Logo"
-            className="h-10 w-auto max-w-[160px] object-contain"
+            className="h-40 w-auto max-w-[160px] object-contain"
           />
         </div>
 
@@ -24,10 +24,9 @@ export const Navbar = () => {
           <NavLink
             to="/"
             className={({ isActive }) =>
-              `flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                isActive
-                  ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/20'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              `flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${isActive
+                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`
             }
           >
@@ -38,10 +37,9 @@ export const Navbar = () => {
           <NavLink
             to="/monitor"
             className={({ isActive }) =>
-              `flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                isActive
-                  ? 'bg-red-600 text-white shadow-sm shadow-red-500/20'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              `flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${isActive
+                ? 'bg-red-600 text-white shadow-sm shadow-red-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`
             }
           >
@@ -52,10 +50,9 @@ export const Navbar = () => {
           <NavLink
             to="/post-live"
             className={({ isActive }) =>
-              `flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                isActive
-                  ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-500/20'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              `flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${isActive
+                ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`
             }
           >
@@ -66,10 +63,9 @@ export const Navbar = () => {
           <NavLink
             to="/auditoria"
             className={({ isActive }) =>
-              `flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                isActive
-                  ? 'bg-purple-600 text-white shadow-sm shadow-purple-500/20'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              `flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${isActive
+                ? 'bg-purple-600 text-white shadow-sm shadow-purple-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`
             }
           >
@@ -80,10 +76,9 @@ export const Navbar = () => {
           <NavLink
             to="/simulador-chat"
             className={({ isActive }) =>
-              `flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                isActive
-                  ? 'bg-pink-600 text-white shadow-sm shadow-pink-500/20'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              `flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${isActive
+                ? 'bg-pink-600 text-white shadow-sm shadow-pink-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`
             }
           >
@@ -95,9 +90,8 @@ export const Navbar = () => {
         {/* Status Indicator */}
         <div className="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 px-3 py-1.5 rounded-full text-xs font-medium">
           <span
-            className={`w-2 h-2 rounded-full ${
-              isLiveActive ? 'bg-red-500 animate-ping' : 'bg-slate-500'
-            }`}
+            className={`w-2 h-2 rounded-full ${isLiveActive ? 'bg-red-500 animate-ping' : 'bg-slate-500'
+              }`}
           />
           <span className={isLiveActive ? 'text-red-400 font-semibold' : 'text-slate-400'}>
             {isLiveActive ? 'TRANSMISIÓN EN VIVO' : 'SIN LIVE ACTIVO'}
